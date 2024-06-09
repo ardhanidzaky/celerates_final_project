@@ -4,6 +4,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils.dates import days_ago
 import pandas as pd
 import io
+import datetime
 
 def transfer_data():
     src_hook = PostgresHook(postgres_conn_id='ardhani_postgres')
@@ -14,7 +15,12 @@ def transfer_data():
     dest_conn = dest_hook.get_conn()
     dest_cursor = dest_conn.cursor()
 
-    query = "SELECT * FROM final_project.day_0;"
+    current_date = datetime.date.today().strftime('%Y-%m-%d')
+    query = f"""
+        SELECT  *
+                , '{current_date}' AS pt_date 
+        FROM    final_project.transactional;
+    """
     src_cursor.execute(query)
     data = src_cursor.fetchall()
     columns = [desc[0] for desc in src_cursor.description]
@@ -40,7 +46,10 @@ def transfer_data():
     dest_conn.commit()
 
     dest_cursor.execute("""
-        INSERT INTO transactional (SELECT * FROM temp_table);
+        INSERT INTO transactional (
+            SELECT  *
+            FROM    temp_table
+        );
     """)
     dest_conn.commit()
 
